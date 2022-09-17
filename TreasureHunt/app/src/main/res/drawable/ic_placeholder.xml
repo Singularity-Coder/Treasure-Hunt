@@ -1,0 +1,26 @@
+<?xml version="1.0" encoding="utf-8"?>
+<layer-list xmlns:android="http://schemas.android.com/apk/res/android">
+
+    <!-- https://stackoverflow.com/questions/58164393/cant-draw-bitmap-in-layer-list -->
+    <!-- https://stackoverflow.com/questions/29625356/make-custom-drawable-shape-in-android -->
+
+    <item
+        android:bottom="0dp"
+        android:end="0dp"
+        android:start="0dp"
+        android:top="0dp">
+        <shape android:shape="oval">
+            <solid android:color="@color/purple_50" />
+        </shape>
+    </item>
+
+    <item
+        android:width="38dp"
+        android:height="38dp"
+        android:bottom="24dp"
+        android:drawable="@drawable/ic_round_person_24"
+        android:end="24dp"
+        android:gravity="center"
+        android:start="24dp"
+        android:top="24dp" />
+</layer-list>

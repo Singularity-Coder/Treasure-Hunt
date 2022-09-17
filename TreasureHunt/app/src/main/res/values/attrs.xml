@@ -1,0 +1,15 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <declare-styleable name="RippleView">
+        <attr name="rv_color" format="color" /> <!--Color of the ripple-->
+        <attr name="rv_strokeWidth" format="dimension"/> <!--Stroke width of the ripple, ONLY work when-->
+        <attr name="rv_radius" format="dimension"/> <!--Radius of the ripple-->
+        <attr name="rv_duration" format="integer"/> <!--Duration of one ripple animation (millisecond)-->
+        <attr name="rv_rippleAmount" format="integer"/> <!--Max amount of ripples at one screen-->
+        <attr name="rv_scale" format="float"/> <!--Scale of ripple at the end of one animation cycle-->
+        <attr name="rv_type" format="enum"> <!--Filled circle or ring-->
+            <enum name="fillRipple" value="0"/>
+            <enum name="strokeRipple" value="1"/>
+        </attr>
+    </declare-styleable>
+</resources>
