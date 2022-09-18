@@ -29,7 +29,7 @@ class TreasureFragment : Fragment() {
         }
     }
 
-    private var shareState: String? = null
+    private var tab: String? = null
 
     private lateinit var binding: FragmentTreasureBinding
 
@@ -38,7 +38,7 @@ class TreasureFragment : Fragment() {
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
-        shareState = arguments?.getString(ARG_PARAM_TAB, "") ?: ""
+        tab = arguments?.getString(ARG_PARAM_TAB, "") ?: ""
     }
 
     override fun onCreateView(inflater: LayoutInflater, container: ViewGroup?, savedInstanceState: Bundle?): View {
@@ -54,7 +54,7 @@ class TreasureFragment : Fragment() {
 
     private fun FragmentTreasureBinding.setupUI() {
         rippleView.startRippleAnimation()
-        if (shareState == Tab.EXPLORE.value) {
+        if (tab == Tab.EXPLORE.value) {
             rippleView.isVisible = true
             cardSearch.isVisible = false
             cardAddTreasureParent.isVisible = true
@@ -70,6 +70,7 @@ class TreasureFragment : Fragment() {
         doAfter(5000L) {
             rippleView.stopRippleAnimation()
             rippleView.isVisible = false
+            treasuresAdapter.tab = tab ?: ""
             treasuresAdapter.treasureList = mutableListOf(
                 Treasure(
                     "Legendary Pokemon: HakuTakuPaku",

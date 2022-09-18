@@ -1,6 +1,7 @@
 package com.singularitycoder.treasurehunt.helpers
 
 import android.Manifest
+import android.content.ClipboardManager
 import android.content.Context
 import android.content.Intent
 import android.content.pm.PackageManager
@@ -26,6 +27,7 @@ import android.widget.Toast
 import androidx.annotation.ColorRes
 import androidx.annotation.DrawableRes
 import androidx.annotation.RequiresApi
+import androidx.appcompat.app.AlertDialog
 import androidx.appcompat.app.AppCompatActivity
 import androidx.constraintlayout.widget.ConstraintLayout
 import androidx.core.content.ContextCompat
@@ -414,6 +416,22 @@ fun <T> AppCompatActivity.collectLatestLifecycleFlow(flow: Flow<T>, collect: sus
         }
     }
 }
+
+fun showSettingsAlert(context: Context) {
+    AlertDialog.Builder(context).apply {
+        setTitle("Enable GPS")
+        setMessage("We need GPS location permission for this feature to work!")
+        setPositiveButton("Settings") { dialog, which ->
+            val intent = Intent(Settings.ACTION_LOCATION_SOURCE_SETTINGS)
+            context.startActivity(intent)
+        }
+        setNegativeButton("Cancel") { dialog, which -> dialog.cancel() }
+        show()
+    }
+}
+
+fun Context?.clipboard(): ClipboardManager? =
+    this?.getSystemService(Context.CLIPBOARD_SERVICE) as? ClipboardManager
 
 enum class DateType(val value: String) {
     dd_MMM_yyyy(value = "dd MMM yyyy"),

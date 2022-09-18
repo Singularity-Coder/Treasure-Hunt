@@ -4,8 +4,10 @@ import android.Manifest
 import android.content.Intent
 import android.location.Location
 import android.os.Bundle
+import android.provider.Settings
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.activity.viewModels
+import androidx.appcompat.app.AlertDialog
 import androidx.appcompat.app.AppCompatActivity
 import androidx.fragment.app.Fragment
 import androidx.fragment.app.FragmentManager
@@ -32,6 +34,28 @@ import dagger.hilt.android.AndroidEntryPoint
 @AndroidEntryPoint
 class MainActivity : AppCompatActivity() {
 
+    /** Whether permission was granted to access approximate location. */
+    var accessCoarseLocationGranted = false
+        private set
+
+    /** Whether to show a rationale for permission to access approximate location. */
+    var accessCoarseLocationNeedsRationale = false
+        private set
+
+    /** Whether permission was granted to access precise location. */
+    var accessFineLocationGranted = false
+        private set
+
+    /** Whether to show a rationale for permission to access precise location. */
+    var accessFineLocationNeedsRationale = false
+        private set
+
+    /**
+     * Whether to show a degraded experience (set after the permission is denied).
+     */
+    var showDegradedExperience = false
+        private set
+
     private var isRationaleDialogToBeShown = false
 
     private val viewModel: MainViewModel by viewModels()
@@ -43,69 +67,27 @@ class MainActivity : AppCompatActivity() {
         Tab.MY_TREASURES.value,
     )
 
+//    val locationPermissionState = LocationPermissionState(this) {
+//        if (it.hasPermission()) {
+//            viewModel.toggleLocationUpdates()
+//        }
+//    }
+
     private val locationPermissionResult = registerForActivityResult(ActivityResultContracts.RequestPermission()) { isPermissionGranted: Boolean? ->
         isPermissionGranted ?: return@registerForActivityResult
         if (isPermissionGranted.not()) {
             showPermissionSettings()
             return@registerForActivityResult
         }
-//        getCurrentLatLong()
-        startLocationService()
-    }
-
-    private fun startLocationService() {
-        viewModel.toggleLocationUpdates()
-        collectLatestLifecycleFlow(flow = viewModel.playServicesAvailableState) { uiState: PlayServicesAvailableState ->
-//            val locationPermissionState = LocationPermissionState(this) {
-//                if (it.hasPermission()) {
-//                    viewModel.toggleLocationUpdates()
-//                }
-//            }
-            when (uiState) {
-                PlayServicesAvailableState.Initializing -> {
-                    binding.tvLatLong.text = getString(R.string.initializing)
-                }
-                PlayServicesAvailableState.PlayServicesUnavailable -> {
-                    binding.tvLatLong.text = getString(R.string.play_services_unavailable)
-                }
-                PlayServicesAvailableState.PlayServicesAvailable -> {
-                    val message = when {
-//                        locationPermissionState.showDegradedExperience -> {
-//                            getString(R.string.please_allow_permission)
-//                        }
-                        viewModel.isReceivingLocationUpdates.value -> if (viewModel.lastLocation.value != null) {
-                            getString(
-                                R.string.location_lat_lng,
-                                viewModel.lastLocation.value!!.latitude,
-                                viewModel.lastLocation.value!!.longitude
-                            )
-                        } else {
-                            binding.tvLatLong.text = getString(R.string.waiting_for_location)
-                            getString(R.string.waiting_for_location)
-                        }
-                        else -> {
-                            getString(R.string.starting)
-                        }
-                    }
-                    binding.tvLatLong.text = message
-                }
-            }
-        }
-        collectLatestLifecycleFlow(flow = viewModel.isReceivingLocationUpdates) { isLocationOn: Boolean ->
-        }
-        collectLatestLifecycleFlow(flow = viewModel.lastLocation) { lastLocation: Location? ->
-//            AlertDialog.Builder(this).apply {
-//                setTitle(R.string.permission_rationale_dialog_title)
-//                setMessage(R.string.permission_rationale_dialog_message)
-//                setPositiveButton("Ok") { dialog, which ->
-//                    val intent = Intent(Settings.ACTION_LOCATION_SOURCE_SETTINGS)
-//                    context.startActivity(intent)
-//                }
-//                setNegativeButton("Cancel") { dialog, which -> dialog.cancel() }
-//                show()
-//            }
-        }
-        binding.tvLatLong.text = "12.958459, 77.662461"
+        fun hasPermission(): Boolean = accessCoarseLocationGranted || accessFineLocationGranted
+        showDegradedExperience = !hasPermission()
+        accessCoarseLocationGranted = hasPermission(Manifest.permission.ACCESS_COARSE_LOCATION)
+        accessCoarseLocationNeedsRationale =
+            shouldShowRationaleFor(Manifest.permission.ACCESS_COARSE_LOCATION)
+        accessFineLocationGranted = hasPermission(Manifest.permission.ACCESS_FINE_LOCATION)
+        accessFineLocationNeedsRationale =
+            shouldShowRationaleFor(Manifest.permission.ACCESS_FINE_LOCATION)
+        listenToLocationUpdates()
     }
 
     private val viewPager2PageChangeListener = object : ViewPager2.OnPageChangeCallback() {
@@ -156,8 +138,8 @@ class MainActivity : AppCompatActivity() {
 
     private fun ActivityMainBinding.setupUI() {
         tvLatLong.setOnClickListener {
-            // Copy latlong to clipboard
-            binding.root.showSnackBar("Copied location: ")
+            clipboard()?.text = "${viewModel.lastLocation.value?.latitude}, ${viewModel.lastLocation.value?.longitude}"
+            binding.root.showSnackBar("Copied location: ${clipboard()?.text}")
         }
     }
 
@@ -176,38 +158,57 @@ class MainActivity : AppCompatActivity() {
         }.attach()
     }
 
-
-    private fun getCurrentLatLong() {
-        if (isLocationPermissionGranted().not()) return
-        val gpsTracker = GpsTracker(this)
-        if (gpsTracker.isGPSEnabled) {
-            val latitude = gpsTracker.treasureLatitude.toString()
-            val longitude = gpsTracker.treasureLongitude.toString()
-            val country = gpsTracker.getCountryName(this)
-            val city = gpsTracker.getLocality(this)
-            val postalCode = gpsTracker.getPostalCode(this)
-            val addressLine = gpsTracker.getAddressLine(this)
-            println(
-                """
-                stringLatitude: $latitude
-                stringLongitude: $longitude
-                country: $country
-                city: $city
-                postalCode: $postalCode
-                addressLine: $addressLine
-            """.trimIndent()
-            )
-            binding.tvLatLong.text = "$latitude, $longitude"
-        } else {
-            // If can't get location GPS or Network is not enabled. Ask user to enable GPS/network in settings
-            gpsTracker.showSettingsAlert()
+    private fun listenToLocationUpdates() {
+        viewModel.toggleLocationUpdates()
+        collectLatestLifecycleFlow(flow = viewModel.playServicesAvailableState) { uiState: PlayServicesAvailableState ->
+            when (uiState) {
+                PlayServicesAvailableState.INITIALIZING -> {
+                    binding.tvLatLong.text = getString(R.string.initializing)
+                }
+                PlayServicesAvailableState.PLAY_SERVICES_UNAVAILABLE -> {
+                    binding.tvLatLong.text = getString(R.string.play_services_unavailable)
+                }
+                PlayServicesAvailableState.PLAY_SERVICES_AVAILABLE -> {
+//                        locationPermissionState.showDegradedExperience -> {
+//                            getString(R.string.please_allow_permission)
+//                        }
+                    binding.tvLatLong.text = getString(R.string.starting)
+                }
+            }
+        }
+        collectLatestLifecycleFlow(flow = viewModel.isReceivingLocationUpdates) { isLocationOn: Boolean ->
+            println("isLocationOn: $isLocationOn")
+            if (isLocationOn.not()) {
+                AlertDialog.Builder(this).apply {
+                    setTitle(R.string.permission_rationale_dialog_title)
+                    setMessage(R.string.permission_rationale_dialog_message)
+                    setPositiveButton("Ok") { dialog, which ->
+                        val intent = Intent(Settings.ACTION_LOCATION_SOURCE_SETTINGS)
+                        context.startActivity(intent)
+                    }
+                    setNegativeButton("Cancel") { dialog, which -> dialog.cancel() }
+                    show()
+                }
+            }
+        }
+        collectLatestLifecycleFlow(flow = viewModel.lastLocation) { lastLocation: Location? ->
+            println("lastLocation: ${lastLocation?.latitude}, ${lastLocation?.longitude}")
+            if (viewModel.playServicesAvailableState.value != PlayServicesAvailableState.PLAY_SERVICES_AVAILABLE) return@collectLatestLifecycleFlow
+            binding.tvLatLong.text = if (lastLocation != null) {
+                getString(
+                    R.string.location_lat_lng,
+                    lastLocation.latitude,
+                    lastLocation.longitude
+                )
+            } else {
+                getString(R.string.waiting_for_location)
+            }
         }
     }
 
     private fun grantLocationPermissions() {
         locationPermissionResult.launch(Manifest.permission.ACCESS_FINE_LOCATION)
     }
-
 
     inner class HomeViewPagerAdapter(fragmentManager: FragmentManager, lifecycle: Lifecycle) : FragmentStateAdapter(fragmentManager, lifecycle) {
         override fun getItemCount(): Int = tabNamesList.size

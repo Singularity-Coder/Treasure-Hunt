@@ -29,6 +29,7 @@ import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
 import javax.inject.Inject
 
+// https://github.com/android/location-samples
 @HiltViewModel
 class MainViewModel @Inject constructor(
     playServicesAvailabilityChecker: PlayServicesAvailabilityChecker,
@@ -40,12 +41,12 @@ class MainViewModel @Inject constructor(
     val playServicesAvailableState = flow {
         emit(
             if (playServicesAvailabilityChecker.isGooglePlayServicesAvailable()) {
-                PlayServicesAvailableState.PlayServicesAvailable
+                PlayServicesAvailableState.PLAY_SERVICES_AVAILABLE
             } else {
-                PlayServicesAvailableState.PlayServicesUnavailable
+                PlayServicesAvailableState.PLAY_SERVICES_UNAVAILABLE
             }
         )
-    }.stateIn(viewModelScope, SharingStarted.Eagerly, PlayServicesAvailableState.Initializing)
+    }.stateIn(viewModelScope, SharingStarted.Eagerly, PlayServicesAvailableState.INITIALIZING)
 
     val isReceivingLocationUpdates = locationRepository.isReceivingLocationUpdates
     val lastLocation = locationRepository.lastLocation
@@ -80,5 +81,7 @@ class MainViewModel @Inject constructor(
 }
 
 enum class PlayServicesAvailableState {
-    Initializing, PlayServicesUnavailable, PlayServicesAvailable
+    INITIALIZING,
+    PLAY_SERVICES_UNAVAILABLE,
+    PLAY_SERVICES_AVAILABLE
 }

@@ -9,6 +9,8 @@ import androidx.recyclerview.widget.RecyclerView
 import coil.load
 import com.singularitycoder.treasurehunt.databinding.LayoutTreasureImageBinding
 import com.singularitycoder.treasurehunt.databinding.ListItemTreasureBinding
+import com.singularitycoder.treasurehunt.helpers.Tab
+import com.singularitycoder.treasurehunt.helpers.drawable
 import com.singularitycoder.treasurehunt.helpers.toBitmapOf
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers.IO
@@ -18,6 +20,7 @@ import kotlinx.coroutines.withContext
 
 class TreasuresAdapter : RecyclerView.Adapter<RecyclerView.ViewHolder>() {
 
+    var tab = Tab.EXPLORE.value
     var treasureList = mutableListOf<Treasure>()
     private var itemClickListener: (treasure: Treasure, position: Int) -> Unit = { treasure, position -> }
 
@@ -60,6 +63,11 @@ class TreasuresAdapter : RecyclerView.Adapter<RecyclerView.ViewHolder>() {
         private fun prepareImageBitmap(treasure: Treasure): BitmapDrawable? {
             val imageLayout = LayoutTreasureImageBinding.inflate(LayoutInflater.from(itemBinding.root.context)).apply {
                 tvFileExtension.text = treasure.filePath.substringAfterLast(".").ifBlank { "file" }
+                if (tab == Tab.EXPLORE.value) {
+                    ivImage.setImageDrawable(itemBinding.root.context.drawable(R.drawable.ic_baseline_get_app_24))
+                } else {
+                    ivImage.setImageDrawable(itemBinding.root.context.drawable(R.drawable.ic_round_open_in_new_24))
+                }
             }
             val bitmapDrawableOfLayout = imageLayout.root.toBitmapOf(
                 width = 480,

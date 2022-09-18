@@ -35,6 +35,7 @@
             app:layout_constraintTop_toTopOf="parent" />
 
         <ImageView
+            android:id="@+id/iv_image"
             android:layout_width="16dp"
             android:layout_height="16dp"
             app:layout_constraintStart_toEndOf="@+id/tv_file_extension"
