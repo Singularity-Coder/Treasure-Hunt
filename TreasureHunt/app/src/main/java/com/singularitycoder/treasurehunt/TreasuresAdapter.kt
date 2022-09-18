@@ -1,9 +1,13 @@
 package com.singularitycoder.treasurehunt
 
 import android.annotation.SuppressLint
+import android.graphics.drawable.BitmapDrawable
 import android.view.LayoutInflater
 import android.view.ViewGroup
+import androidx.core.graphics.drawable.toDrawable
 import androidx.recyclerview.widget.RecyclerView
+import coil.load
+import com.singularitycoder.treasurehunt.databinding.LayoutTreasureImageBinding
 import com.singularitycoder.treasurehunt.databinding.ListItemTreasureBinding
 
 class TreasuresAdapter : RecyclerView.Adapter<RecyclerView.ViewHolder>() {
@@ -34,10 +38,23 @@ class TreasuresAdapter : RecyclerView.Adapter<RecyclerView.ViewHolder>() {
         @SuppressLint("SetTextI18n")
         fun setData(treasure: Treasure) {
             itemBinding.apply {
+                tvTreasureName.text = treasure.title
+                ivImage.load(prepareImageBitmap(treasure))
                 cardBody.setOnClickListener {
                     itemClickListener.invoke(treasure, bindingAdapterPosition)
                 }
             }
+        }
+
+        private fun prepareImageBitmap(treasure: Treasure): BitmapDrawable? {
+            val imageLayout = LayoutTreasureImageBinding.inflate(LayoutInflater.from(itemBinding.root.context)).apply {
+                tvFileExtension.text = treasure.filePath.substringAfterLast(".").ifBlank { "file" }
+            }
+            val bitmapDrawableOfLayout = imageLayout.root.toBitmapOf(
+                width = 480,
+                height = 210
+            )?.toDrawable(itemBinding.root.context.resources)
+            return bitmapDrawableOfLayout
         }
     }
 }

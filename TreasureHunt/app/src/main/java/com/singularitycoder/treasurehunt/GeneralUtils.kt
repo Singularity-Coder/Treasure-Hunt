@@ -6,21 +6,28 @@ import android.content.Intent
 import android.content.pm.PackageManager
 import android.content.res.Resources
 import android.graphics.Bitmap
+import android.graphics.Canvas
 import android.graphics.Point
 import android.graphics.drawable.Drawable
 import android.media.MediaMetadataRetriever
 import android.net.Uri
 import android.os.Build
+import android.os.Environment
 import android.os.Handler
 import android.os.Looper
 import android.provider.Settings
+import android.view.KeyEvent
+import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
+import android.view.inputmethod.EditorInfo
+import android.widget.EditText
 import android.widget.Toast
 import androidx.annotation.ColorRes
 import androidx.annotation.DrawableRes
 import androidx.annotation.RequiresApi
 import androidx.appcompat.app.AppCompatActivity
+import androidx.constraintlayout.widget.ConstraintLayout
 import androidx.core.content.ContextCompat
 import androidx.fragment.app.Fragment
 import androidx.fragment.app.FragmentTransaction
@@ -32,10 +39,13 @@ import kotlinx.coroutines.Dispatchers.Default
 import kotlinx.coroutines.Dispatchers.Main
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
+import java.io.ByteArrayOutputStream
 import java.io.File
+import java.io.FileOutputStream
 import java.text.SimpleDateFormat
 import java.util.*
 import java.util.concurrent.TimeUnit
+
 
 const val DB_CONTACT = "db_contact"
 const val TABLE_CONTACT = "table_contact"
@@ -157,7 +167,7 @@ val mainActivityPermissions = arrayOf(
     Manifest.permission.CAMERA,
 )
 
-fun Context.hasLocationPermission(): Boolean = ContextCompat.checkSelfPermission(
+fun Context.isLocationPermissionGranted(): Boolean = ContextCompat.checkSelfPermission(
     this,
     Manifest.permission.ACCESS_FINE_LOCATION
 ) == PackageManager.PERMISSION_GRANTED
@@ -178,7 +188,13 @@ fun doAfter(duration: Long, task: () -> Unit) {
     Handler(Looper.getMainLooper()).postDelayed(task, duration)
 }
 
-fun Int.dpToPx(): Int = (this * Resources.getSystem().displayMetrics.density).toInt()
+fun Number.dpToPx(): Float = this.toFloat() * Resources.getSystem().displayMetrics.density
+
+fun Number.pxToDp(): Float = this.toFloat() / Resources.getSystem().displayMetrics.density
+
+fun Number.spToPx(): Float = this.toFloat() * Resources.getSystem().displayMetrics.scaledDensity
+
+fun Number.pxToSp(): Float = this.toFloat() / Resources.getSystem().displayMetrics.scaledDensity
 
 // https://stackoverflow.com/questions/44109057/get-video-thumbnail-from-uri
 @RequiresApi(Build.VERSION_CODES.O_MR1)
@@ -295,6 +311,94 @@ fun View.setMargins(
         params.setMargins(start, top, end, bottom)
     }
     this.requestLayout()
+}
+
+// https://stackoverflow.com/questions/2004344/how-do-i-handle-imeoptions-done-button-click
+inline fun EditText.onImeDoneClick(crossinline callback: () -> Unit) {
+    setOnEditorActionListener { _, actionId, event ->
+        if (actionId == EditorInfo.IME_ACTION_DONE ||
+            (event?.action == KeyEvent.ACTION_DOWN && event.keyCode == KeyEvent.KEYCODE_ENTER)
+        ) {
+            callback.invoke()
+            return@setOnEditorActionListener true
+        }
+        return@setOnEditorActionListener false
+    }
+}
+
+// https://stackoverflow.com/questions/7200535/how-to-convert-views-to-bitmaps
+// https://www.youtube.com/watch?v=laySURtxUTk
+/** If layout inflated already */
+fun View.toBitmapWith(defaultColor: Int): Bitmap? = try {
+    val bitmap = Bitmap.createBitmap(
+        /* width = */ this.width,
+        /* height = */ this.height,
+        /* config = */ Bitmap.Config.ARGB_8888
+    )
+    val canvas = Canvas(bitmap).apply {
+        drawColor(defaultColor)
+    }
+    this.draw(canvas)
+    bitmap
+} catch (e: Exception) {
+    println("Error: $e")
+    null
+}
+
+// https://stackoverflow.com/questions/7200535/how-to-convert-views-to-bitmaps
+// https://www.youtube.com/watch?v=laySURtxUTk
+/** When layout not inflated yet. Measure the view first before extracting the bitmap.
+ * Else the width and height will be 0. Which means u cant do view.width & view.height.
+ * If unsure of width and height specify MeasureSpec.UNSPECIFIED */
+fun View.toBitmapOf(width: Int, height: Int): Bitmap? = try {
+    this.measure(
+        /* widthMeasureSpec = */ View.MeasureSpec.makeMeasureSpec(width, View.MeasureSpec.EXACTLY),
+        /* heightMeasureSpec = */ View.MeasureSpec.makeMeasureSpec(height, View.MeasureSpec.EXACTLY)
+    )
+    val bitmap = Bitmap.createBitmap(
+        /* width = */ this.measuredWidth,
+        /* height = */ this.measuredHeight,
+        /* config = */ Bitmap.Config.ARGB_8888
+    )
+    this.layout(
+        /* l = */ 0,
+        /* t = */ 0,
+        /* r = */ this.measuredWidth,
+        /* b = */ this.measuredHeight
+    )
+    this.draw(Canvas(bitmap))
+    bitmap
+} catch (e: Exception) {
+    println("Error: $e")
+    null
+}
+
+// https://gist.github.com/antocara/5fb2904df2c7de34ebe9
+fun saveBitmapFromViewToFile(context: Context) {
+    // inflate layout
+    val layout: View = LayoutInflater.from(context).inflate(R.layout.layout_treasure_image, null, false)
+    val cl = layout.findViewById<View>(R.id.cl_extension) as ConstraintLayout
+
+    // reference View with image
+    cl.measure(View.MeasureSpec.UNSPECIFIED, View.MeasureSpec.UNSPECIFIED)
+    val bitmap = Bitmap.createBitmap(cl.measuredWidth, cl.measuredHeight, Bitmap.Config.ARGB_8888)
+    val canvas = Canvas(bitmap)
+    cl.layout(0, 0, cl.measuredWidth, cl.measuredHeight)
+    cl.draw(canvas)
+
+    // save to File
+    val bytes = ByteArrayOutputStream()
+    bitmap.compress(Bitmap.CompressFormat.JPEG, 100, bytes)
+    val fileName = "imageFromView.jpg"
+    val file = File(Environment.getExternalStorageDirectory().toString() + File.separator + fileName)
+    var fo: FileOutputStream? = null
+    try {
+        fo = FileOutputStream(file)
+        fo.write(bytes.toByteArray())
+        fo.close()
+    } catch (e: Exception) {
+        println("Error File: $e")
+    }
 }
 
 enum class DateType(val value: String) {

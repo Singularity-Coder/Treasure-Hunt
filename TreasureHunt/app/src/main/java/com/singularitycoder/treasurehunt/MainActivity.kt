@@ -13,13 +13,14 @@ import com.google.android.material.tabs.TabLayout
 import com.google.android.material.tabs.TabLayoutMediator
 import com.singularitycoder.treasurehunt.databinding.ActivityMainBinding
 import dagger.hilt.android.AndroidEntryPoint
-import kotlinx.coroutines.launch
 
 
 // Foreground service that constantly gets lat long
 // It would be nice to bind that treasure in a physical location but that is not possible. so the lat long will be fixed but the device is moving constantly.
 // It would also be nice to do it in AR or VR. So the treasure are not just limited to audio, video, image, text but any file. We plant it in a location and find it in AR/VR. I doubt if its possible on android though
 // U dont have to handle the file formats separately. Just pass to chrome
+// As soon as the lat long matches the files present in that location all the devices must automatically add them to "My Treasures" in db
+// Explore only shows the files that match the lat long in real time
 
 @AndroidEntryPoint
 class MainActivity : AppCompatActivity() {
@@ -98,23 +99,24 @@ class MainActivity : AppCompatActivity() {
 
 
     private fun getCurrentLatLong() {
-        if (hasLocationPermission().not()) return
+        if (isLocationPermissionGranted().not()) return
         val gpsTracker = GpsTracker(this)
         if (gpsTracker.isGPSEnabled) {
-            val stringLatitude = gpsTracker.treasureLatitude.toString()
-            val stringLongitude = gpsTracker.treasureLongitude.toString()
+            val latitude = gpsTracker.treasureLatitude.toString()
+            val longitude = gpsTracker.treasureLongitude.toString()
             val country = gpsTracker.getCountryName(this)
             val city = gpsTracker.getLocality(this)
             val postalCode = gpsTracker.getPostalCode(this)
             val addressLine = gpsTracker.getAddressLine(this)
             println("""
-                stringLatitude: $stringLatitude
-                stringLongitude: $stringLongitude
+                stringLatitude: $latitude
+                stringLongitude: $longitude
                 country: $country
                 city: $city
                 postalCode: $postalCode
                 addressLine: $addressLine
             """.trimIndent())
+            binding.tvLatLong.text = "$latitude, $longitude"
         } else {
             // If can't get location GPS or Network is not enabled. Ask user to enable GPS/network in settings
             gpsTracker.showSettingsAlert()

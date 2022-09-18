@@ -71,19 +71,43 @@ class TreasureFragment : Fragment() {
             treasuresAdapter.treasureList = mutableListOf(
                 Treasure(
                     "Legendary Pokemon: HakuTakuPaku",
-                    ""
+                    "image.png"
                 ),
                 Treasure(
-                    "Legendary Pokemon: HakuTakuPaku",
-                    ""
+                    "If 5 is five then what will you get with 5000 - 7000 + 3000 time shuunya.",
+                    "video.mp4"
                 ),
                 Treasure(
-                    "Legendary Pokemon: HakuTakuPaku",
-                    ""
+                    "I plundered all the world to make a point. And that is what?",
+                    "audio.mp3"
                 ),
                 Treasure(
-                    "Legendary Pokemon: HakuTakuPaku",
-                    ""
+                    "Secret UFO tech.",
+                    "document.pdf"
+                ),
+                Treasure(
+                    "Original Ayurveda Shastra.",
+                    "document.djvu"
+                ),
+                Treasure(
+                    "Custom made gambling App that lets you earn a trillion dollars.",
+                    "document.app"
+                ),
+                Treasure(
+                    "Death Note. After Light died I found the book. I got scared so I am waiting for a worthy user.",
+                    "document.apk"
+                ),
+                Treasure(
+                    "A super malware capable of taking down any stock market!",
+                    "document.java"
+                ),
+                Treasure(
+                    "A funny picture of my cat talking in klingon. It said an I...",
+                    "document.webp"
+                ),
+                Treasure(
+                    "hello world!",
+                    "document.kt"
                 )
             )
             treasuresAdapter.notifyDataSetChanged()
