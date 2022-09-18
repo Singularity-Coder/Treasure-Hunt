@@ -10,6 +10,7 @@ import android.util.AttributeSet
 import android.view.View
 import android.view.animation.AccelerateDecelerateInterpolator
 import android.widget.RelativeLayout
+import com.singularitycoder.treasurehunt.helpers.color
 import kotlin.math.min
 
 // https://github.com/skyfishjy/android-ripple-background

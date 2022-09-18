@@ -1,8 +1,11 @@
 package com.singularitycoder.treasurehunt
 
 import android.Manifest
+import android.content.Intent
+import android.location.Location
 import android.os.Bundle
 import androidx.activity.result.contract.ActivityResultContracts
+import androidx.activity.viewModels
 import androidx.appcompat.app.AppCompatActivity
 import androidx.fragment.app.Fragment
 import androidx.fragment.app.FragmentManager
@@ -12,8 +15,8 @@ import androidx.viewpager2.widget.ViewPager2
 import com.google.android.material.tabs.TabLayout
 import com.google.android.material.tabs.TabLayoutMediator
 import com.singularitycoder.treasurehunt.databinding.ActivityMainBinding
+import com.singularitycoder.treasurehunt.helpers.*
 import dagger.hilt.android.AndroidEntryPoint
-
 
 // Foreground service that constantly gets lat long
 // It would be nice to bind that treasure in a physical location but that is not possible. so the lat long will be fixed but the device is moving constantly.
@@ -21,9 +24,17 @@ import dagger.hilt.android.AndroidEntryPoint
 // U dont have to handle the file formats separately. Just pass to chrome
 // As soon as the lat long matches the files present in that location all the devices must automatically add them to "My Treasures" in db
 // Explore only shows the files that match the lat long in real time
+// For sockets u should do some sort of geo fence else getting the treasure will become next to impossible with moving targets. U wont have a problem with centralised server in this case
+// Setting geo fence without google places should be possible.
+
+// TODO foreground service with timer that pings lat long every sec
 
 @AndroidEntryPoint
 class MainActivity : AppCompatActivity() {
+
+    private var isRationaleDialogToBeShown = false
+
+    private val viewModel: MainViewModel by viewModels()
 
     private lateinit var binding: ActivityMainBinding
 
@@ -38,7 +49,63 @@ class MainActivity : AppCompatActivity() {
             showPermissionSettings()
             return@registerForActivityResult
         }
-        getCurrentLatLong()
+//        getCurrentLatLong()
+        startLocationService()
+    }
+
+    private fun startLocationService() {
+        viewModel.toggleLocationUpdates()
+        collectLatestLifecycleFlow(flow = viewModel.playServicesAvailableState) { uiState: PlayServicesAvailableState ->
+//            val locationPermissionState = LocationPermissionState(this) {
+//                if (it.hasPermission()) {
+//                    viewModel.toggleLocationUpdates()
+//                }
+//            }
+            when (uiState) {
+                PlayServicesAvailableState.Initializing -> {
+                    binding.tvLatLong.text = getString(R.string.initializing)
+                }
+                PlayServicesAvailableState.PlayServicesUnavailable -> {
+                    binding.tvLatLong.text = getString(R.string.play_services_unavailable)
+                }
+                PlayServicesAvailableState.PlayServicesAvailable -> {
+                    val message = when {
+//                        locationPermissionState.showDegradedExperience -> {
+//                            getString(R.string.please_allow_permission)
+//                        }
+                        viewModel.isReceivingLocationUpdates.value -> if (viewModel.lastLocation.value != null) {
+                            getString(
+                                R.string.location_lat_lng,
+                                viewModel.lastLocation.value!!.latitude,
+                                viewModel.lastLocation.value!!.longitude
+                            )
+                        } else {
+                            binding.tvLatLong.text = getString(R.string.waiting_for_location)
+                            getString(R.string.waiting_for_location)
+                        }
+                        else -> {
+                            getString(R.string.starting)
+                        }
+                    }
+                    binding.tvLatLong.text = message
+                }
+            }
+        }
+        collectLatestLifecycleFlow(flow = viewModel.isReceivingLocationUpdates) { isLocationOn: Boolean ->
+        }
+        collectLatestLifecycleFlow(flow = viewModel.lastLocation) { lastLocation: Location? ->
+//            AlertDialog.Builder(this).apply {
+//                setTitle(R.string.permission_rationale_dialog_title)
+//                setMessage(R.string.permission_rationale_dialog_message)
+//                setPositiveButton("Ok") { dialog, which ->
+//                    val intent = Intent(Settings.ACTION_LOCATION_SOURCE_SETTINGS)
+//                    context.startActivity(intent)
+//                }
+//                setNegativeButton("Cancel") { dialog, which -> dialog.cancel() }
+//                show()
+//            }
+        }
+        binding.tvLatLong.text = "12.958459, 77.662461"
     }
 
     private val viewPager2PageChangeListener = object : ViewPager2.OnPageChangeCallback() {
@@ -66,6 +133,17 @@ class MainActivity : AppCompatActivity() {
         setUpViewPager()
     }
 
+    override fun onStart() {
+        super.onStart()
+        val serviceIntent = Intent(this, ForegroundLocationService::class.java)
+        bindService(serviceIntent, viewModel, BIND_AUTO_CREATE)
+    }
+
+    override fun onStop() {
+        super.onStop()
+        unbindService(viewModel)
+    }
+
     override fun onResume() {
         super.onResume()
         grantLocationPermissions()
@@ -79,6 +157,7 @@ class MainActivity : AppCompatActivity() {
     private fun ActivityMainBinding.setupUI() {
         tvLatLong.setOnClickListener {
             // Copy latlong to clipboard
+            binding.root.showSnackBar("Copied location: ")
         }
     }
 
@@ -108,14 +187,16 @@ class MainActivity : AppCompatActivity() {
             val city = gpsTracker.getLocality(this)
             val postalCode = gpsTracker.getPostalCode(this)
             val addressLine = gpsTracker.getAddressLine(this)
-            println("""
+            println(
+                """
                 stringLatitude: $latitude
                 stringLongitude: $longitude
                 country: $country
                 city: $city
                 postalCode: $postalCode
                 addressLine: $addressLine
-            """.trimIndent())
+            """.trimIndent()
+            )
             binding.tvLatLong.text = "$latitude, $longitude"
         } else {
             // If can't get location GPS or Network is not enabled. Ask user to enable GPS/network in settings

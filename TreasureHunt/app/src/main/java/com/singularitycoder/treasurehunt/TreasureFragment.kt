@@ -14,8 +14,9 @@ import androidx.fragment.app.Fragment
 import androidx.recyclerview.widget.DefaultItemAnimator
 import androidx.recyclerview.widget.StaggeredGridLayoutManager
 import com.singularitycoder.treasurehunt.databinding.FragmentTreasureBinding
+import com.singularitycoder.treasurehunt.helpers.Tab
+import com.singularitycoder.treasurehunt.helpers.doAfter
 import java.io.File
-
 
 class TreasureFragment : Fragment() {
 
@@ -56,9 +57,10 @@ class TreasureFragment : Fragment() {
         if (shareState == Tab.EXPLORE.value) {
             rippleView.isVisible = true
             cardSearch.isVisible = false
-            cardAddTreasureParent.isVisible = false
+            cardAddTreasureParent.isVisible = true
         } else {
             rippleView.isVisible = false
+            cardAddTreasureParent.isVisible = false
         }
         rvFlukes.apply {
             layoutManager = StaggeredGridLayoutManager(2, StaggeredGridLayoutManager.VERTICAL)
@@ -128,7 +130,7 @@ class TreasureFragment : Fragment() {
             etSearch.setText("")
         }
         treasuresAdapter.setItemClickListener { treasure, position ->
-            showFileInBrowser(treasure)
+//            showFileInBrowser(treasure)
         }
     }
 

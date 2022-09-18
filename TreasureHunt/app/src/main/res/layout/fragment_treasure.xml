@@ -51,7 +51,7 @@
                 android:drawablePadding="8dp"
                 android:drawableTint="@android:color/darker_gray"
                 android:enabled="true"
-                android:hint="Search People"
+                android:hint="Search treasures"
                 android:inputType="textCapWords"
                 android:maxLines="1"
                 android:textColor="@color/title_color"

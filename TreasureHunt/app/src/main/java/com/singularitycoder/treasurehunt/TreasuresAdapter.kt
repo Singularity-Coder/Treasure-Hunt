@@ -9,6 +9,12 @@ import androidx.recyclerview.widget.RecyclerView
 import coil.load
 import com.singularitycoder.treasurehunt.databinding.LayoutTreasureImageBinding
 import com.singularitycoder.treasurehunt.databinding.ListItemTreasureBinding
+import com.singularitycoder.treasurehunt.helpers.toBitmapOf
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Dispatchers.IO
+import kotlinx.coroutines.Dispatchers.Main
+import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
 
 class TreasuresAdapter : RecyclerView.Adapter<RecyclerView.ViewHolder>() {
 
@@ -39,7 +45,12 @@ class TreasuresAdapter : RecyclerView.Adapter<RecyclerView.ViewHolder>() {
         fun setData(treasure: Treasure) {
             itemBinding.apply {
                 tvTreasureName.text = treasure.title
-                ivImage.load(prepareImageBitmap(treasure))
+                CoroutineScope(IO).launch {
+                    val bitmap = prepareImageBitmap(treasure)
+                    withContext(Main) {
+                        ivImage.load(bitmap)
+                    }
+                }
                 cardBody.setOnClickListener {
                     itemClickListener.invoke(treasure, bindingAdapterPosition)
                 }

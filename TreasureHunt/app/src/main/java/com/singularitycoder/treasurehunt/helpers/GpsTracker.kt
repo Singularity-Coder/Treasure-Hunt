@@ -1,4 +1,4 @@
-package com.singularitycoder.treasurehunt
+package com.singularitycoder.treasurehunt.helpers
 
 import android.Manifest
 import android.app.AlertDialog

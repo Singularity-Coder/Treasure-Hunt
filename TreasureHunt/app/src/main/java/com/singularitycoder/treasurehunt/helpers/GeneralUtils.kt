@@ -1,4 +1,4 @@
-package com.singularitycoder.treasurehunt
+package com.singularitycoder.treasurehunt.helpers
 
 import android.Manifest
 import android.content.Context
@@ -31,12 +31,18 @@ import androidx.constraintlayout.widget.ConstraintLayout
 import androidx.core.content.ContextCompat
 import androidx.fragment.app.Fragment
 import androidx.fragment.app.FragmentTransaction
+import androidx.lifecycle.Lifecycle
+import androidx.lifecycle.lifecycleScope
+import androidx.lifecycle.repeatOnLifecycle
 import com.google.android.material.bottomsheet.BottomSheetDialogFragment
 import com.google.android.material.snackbar.BaseTransientBottomBar
 import com.google.android.material.snackbar.Snackbar
+import com.singularitycoder.treasurehunt.R
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers.Default
 import kotlinx.coroutines.Dispatchers.Main
+import kotlinx.coroutines.flow.Flow
+import kotlinx.coroutines.flow.collectLatest
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import java.io.ByteArrayOutputStream
@@ -45,7 +51,6 @@ import java.io.FileOutputStream
 import java.text.SimpleDateFormat
 import java.util.*
 import java.util.concurrent.TimeUnit
-
 
 const val DB_CONTACT = "db_contact"
 const val TABLE_CONTACT = "table_contact"
@@ -358,7 +363,7 @@ fun View.toBitmapOf(width: Int, height: Int): Bitmap? = try {
     val bitmap = Bitmap.createBitmap(
         /* width = */ this.measuredWidth,
         /* height = */ this.measuredHeight,
-        /* config = */ Bitmap.Config.ARGB_8888
+        /* config = */ Bitmap.Config.ARGB_8888 // Each pixel is set to 4 bytes of memory in this config
     )
     this.layout(
         /* l = */ 0,
@@ -366,7 +371,7 @@ fun View.toBitmapOf(width: Int, height: Int): Bitmap? = try {
         /* r = */ this.measuredWidth,
         /* b = */ this.measuredHeight
     )
-    this.draw(Canvas(bitmap))
+    this.draw(Canvas(bitmap /* The canvas is drawn on the bitmap */)) // We are basically drawing the view on the Canvas
     bitmap
 } catch (e: Exception) {
     println("Error: $e")
@@ -398,6 +403,15 @@ fun saveBitmapFromViewToFile(context: Context) {
         fo.close()
     } catch (e: Exception) {
         println("Error File: $e")
+    }
+}
+
+// Credit: Philip Lackner
+fun <T> AppCompatActivity.collectLatestLifecycleFlow(flow: Flow<T>, collect: suspend (T) -> Unit) {
+    lifecycleScope.launch {
+        repeatOnLifecycle(Lifecycle.State.STARTED) {
+            flow.collectLatest(collect)
+        }
     }
 }
 
