@@ -9,7 +9,8 @@ import android.content.pm.PackageManager
 import android.location.GnssStatus
 import android.location.Location
 import android.location.LocationManager
-import android.os.*
+import android.os.Build
+import android.os.Bundle
 import android.provider.Settings
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.activity.viewModels
@@ -54,14 +55,13 @@ class MainActivity : AppCompatActivity() {
 
     var lastUpdatedLocation: Location? = null
 
+    // FIXME This is not working
     private val locationToggleStatusReceiver = object : BroadcastReceiver() {
         override fun onReceive(context: Context, intent: Intent) {
             if (intent.action != BroadcastKey.LOCATION_TOGGLE_STATUS) return
             val isLocationToggleOn = intent.getBooleanExtra(IntentKey.LOCATION_TOGGLE_STATUS, false)
             if (isLocationToggleOn.not()) {
                 showLocationToggleDialog()
-            } else {
-                grantLocationPermissions()
             }
         }
     }
@@ -98,30 +98,6 @@ class MainActivity : AppCompatActivity() {
             viewModel.toggleLocationUpdates()
         } else {
             showLocationToggleDialog()
-        }
-    }
-
-    private fun showLocationToggleDialog() {
-        AlertDialog.Builder(this@MainActivity).apply {
-            setTitle("Location toggle disabled")
-            setMessage("Turn on the location toggle to hunt treasures. Swipe down notifications drawer -> Location")
-            setPositiveButton("Ok") { dialog, which ->
-                grantLocationPermissions()
-            }
-            show()
-        }
-    }
-
-    private fun showLocationPermissionDialog() {
-        AlertDialog.Builder(this).apply {
-            setTitle(R.string.permission_rationale_dialog_title)
-            setMessage(R.string.permission_rationale_dialog_message)
-            setPositiveButton("Ok") { dialog, which ->
-                val intent = Intent(Settings.ACTION_LOCATION_SOURCE_SETTINGS)
-                context.startActivity(intent)
-            }
-            setNegativeButton("Cancel") { dialog, which -> dialog.cancel() }
-            show()
         }
     }
 
@@ -258,6 +234,30 @@ class MainActivity : AppCompatActivity() {
 
     private fun unregisterReceiver() {
         unregisterReceiver(locationToggleStatusReceiver)
+    }
+
+    private fun showLocationToggleDialog() {
+        AlertDialog.Builder(this@MainActivity).apply {
+            setTitle("Location toggle disabled")
+            setMessage("Turn on the location toggle to hunt treasures. Swipe down notifications drawer -> Location")
+            setPositiveButton("Ok") { dialog, which ->
+                grantLocationPermissions()
+            }
+            show()
+        }
+    }
+
+    private fun showLocationPermissionDialog() {
+        AlertDialog.Builder(this).apply {
+            setTitle(R.string.permission_rationale_dialog_title)
+            setMessage(R.string.permission_rationale_dialog_message)
+            setPositiveButton("Ok") { dialog, which ->
+                val intent = Intent(Settings.ACTION_LOCATION_SOURCE_SETTINGS)
+                context.startActivity(intent)
+            }
+            setNegativeButton("Cancel") { dialog, which -> dialog.cancel() }
+            show()
+        }
     }
 
     inner class HomeViewPagerAdapter(fragmentManager: FragmentManager, lifecycle: Lifecycle) : FragmentStateAdapter(fragmentManager, lifecycle) {
