@@ -16,6 +16,8 @@ import androidx.recyclerview.widget.StaggeredGridLayoutManager
 import com.singularitycoder.treasurehunt.databinding.FragmentTreasureBinding
 import com.singularitycoder.treasurehunt.helpers.Tab
 import com.singularitycoder.treasurehunt.helpers.doAfter
+import com.singularitycoder.treasurehunt.helpers.dummyTreasures
+import com.singularitycoder.treasurehunt.helpers.hideKeyboard
 import java.io.File
 
 class TreasureFragment : Fragment() {
@@ -53,66 +55,27 @@ class TreasureFragment : Fragment() {
     }
 
     private fun FragmentTreasureBinding.setupUI() {
-        rippleView.startRippleAnimation()
-        if (tab == Tab.EXPLORE.value) {
-            rippleView.isVisible = true
-            cardSearch.isVisible = false
-            cardAddTreasureParent.isVisible = true
-        } else {
-            rippleView.isVisible = false
-            cardAddTreasureParent.isVisible = false
-        }
         rvFlukes.apply {
             layoutManager = StaggeredGridLayoutManager(2, StaggeredGridLayoutManager.VERTICAL)
             itemAnimator = DefaultItemAnimator()
             adapter = treasuresAdapter
         }
-        doAfter(5000L) {
-            rippleView.stopRippleAnimation()
+        treasuresAdapter.tab = tab ?: ""
+        if (tab == Tab.EXPLORE.value) {
+            rippleView.startRippleAnimation()
+            rippleView.isVisible = true
+            cardSearch.isVisible = false
+            cardAddTreasureParent.isVisible = true
+            doAfter(5000L) {
+                rippleView.stopRippleAnimation()
+                rippleView.isVisible = false
+                treasuresAdapter.treasureList = dummyTreasures
+                treasuresAdapter.notifyDataSetChanged()
+            }
+        } else {
             rippleView.isVisible = false
-            treasuresAdapter.tab = tab ?: ""
-            treasuresAdapter.treasureList = mutableListOf(
-                Treasure(
-                    "Legendary Pokemon: HakuTakuPaku",
-                    "image.png"
-                ),
-                Treasure(
-                    "If 5 is five then what will you get with 5000 - 7000 + 3000 time shuunya.",
-                    "video.mp4"
-                ),
-                Treasure(
-                    "I plundered all the world to make a point. And that is what?",
-                    "audio.mp3"
-                ),
-                Treasure(
-                    "Secret UFO tech.",
-                    "document.pdf"
-                ),
-                Treasure(
-                    "Original Ayurveda Shastra.",
-                    "document.djvu"
-                ),
-                Treasure(
-                    "Custom made gambling App that lets you earn a trillion dollars.",
-                    "document.app"
-                ),
-                Treasure(
-                    "Death Note. After Light died I found the book. I got scared so I am waiting for a worthy user.",
-                    "document.apk"
-                ),
-                Treasure(
-                    "A super malware capable of taking down any stock market!",
-                    "document.java"
-                ),
-                Treasure(
-                    "A funny picture of my cat talking in klingon. It said an I...",
-                    "document.webp"
-                ),
-                Treasure(
-                    "hello world!",
-                    "document.kt"
-                )
-            )
+            cardAddTreasureParent.isVisible = false
+            treasuresAdapter.treasureList = dummyTreasures
             treasuresAdapter.notifyDataSetChanged()
         }
     }
@@ -129,6 +92,23 @@ class TreasureFragment : Fragment() {
         }
         ibClearSearch.setOnClickListener {
             etSearch.setText("")
+        }
+        ibAddTreasure.setOnClickListener {
+            // TODO open file picker
+            treasuresAdapter.treasureList.add(
+                Treasure(
+                    title = etAddTreasure.text.toString(),
+                    latitude = (activity as? MainActivity)?.lastUpdatedLocation?.latitude ?: 0.0,
+                    longitude = (activity as? MainActivity)?.lastUpdatedLocation?.longitude ?: 0.0,
+                    filePath = "random.jpeg"
+                )
+            )
+            // TODO add to DB first
+            etAddTreasure.setText("")
+            etAddTreasure.requestFocus()
+            etAddTreasure.hideKeyboard()
+            etAddTreasure.clearFocus()
+            treasuresAdapter.notifyItemInserted(treasuresAdapter.treasureList.size)
         }
         treasuresAdapter.setItemClickListener { treasure, position ->
 //            showFileInBrowser(treasure)

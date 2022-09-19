@@ -21,34 +21,19 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.singularitycoder.treasurehunt.data.LocationPreferences
 import com.singularitycoder.treasurehunt.data.LocationRepository
-import com.singularitycoder.treasurehunt.data.PlayServicesAvailabilityChecker
 import dagger.hilt.android.lifecycle.HiltViewModel
-import kotlinx.coroutines.flow.SharingStarted
-import kotlinx.coroutines.flow.flow
-import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
 import javax.inject.Inject
 
 // https://github.com/android/location-samples
 @HiltViewModel
 class MainViewModel @Inject constructor(
-    playServicesAvailabilityChecker: PlayServicesAvailabilityChecker,
     locationRepository: LocationRepository,
     private val locationPreferences: LocationPreferences,
     private val serviceConnection: ForegroundLocationServiceConnection
 ) : ViewModel(), ServiceConnection by serviceConnection {
 
-    val playServicesAvailableState = flow {
-        emit(
-            if (playServicesAvailabilityChecker.isGooglePlayServicesAvailable()) {
-                PlayServicesAvailableState.PLAY_SERVICES_AVAILABLE
-            } else {
-                PlayServicesAvailableState.PLAY_SERVICES_UNAVAILABLE
-            }
-        )
-    }.stateIn(viewModelScope, SharingStarted.Eagerly, PlayServicesAvailableState.INITIALIZING)
-
-    val isReceivingLocationUpdates = locationRepository.isReceivingLocationUpdates
+    private val isReceivingLocationUpdates = locationRepository.isReceivingLocationUpdates
     val lastLocation = locationRepository.lastLocation
 
     fun toggleLocationUpdates() {
@@ -78,10 +63,4 @@ class MainViewModel @Inject constructor(
             locationPreferences.setLocationTurnedOn(false)
         }
     }
-}
-
-enum class PlayServicesAvailableState {
-    INITIALIZING,
-    PLAY_SERVICES_UNAVAILABLE,
-    PLAY_SERVICES_AVAILABLE
 }

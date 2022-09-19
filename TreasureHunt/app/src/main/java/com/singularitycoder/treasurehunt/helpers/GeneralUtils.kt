@@ -1,6 +1,7 @@
 package com.singularitycoder.treasurehunt.helpers
 
 import android.Manifest
+import android.app.Activity
 import android.content.ClipboardManager
 import android.content.Context
 import android.content.Intent
@@ -22,6 +23,7 @@ import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
 import android.view.inputmethod.EditorInfo
+import android.view.inputmethod.InputMethodManager
 import android.widget.EditText
 import android.widget.Toast
 import androidx.annotation.ColorRes
@@ -31,6 +33,7 @@ import androidx.appcompat.app.AlertDialog
 import androidx.appcompat.app.AppCompatActivity
 import androidx.constraintlayout.widget.ConstraintLayout
 import androidx.core.content.ContextCompat
+import androidx.core.view.WindowInsetsCompat
 import androidx.fragment.app.Fragment
 import androidx.fragment.app.FragmentTransaction
 import androidx.lifecycle.Lifecycle
@@ -432,6 +435,43 @@ fun showSettingsAlert(context: Context) {
 
 fun Context?.clipboard(): ClipboardManager? =
     this?.getSystemService(Context.CLIPBOARD_SERVICE) as? ClipboardManager
+
+/** Request focus before showing keyboard - editText.requestFocus() */
+fun EditText?.showKeyboard() {
+    if (this?.hasFocus() == true) {
+        val imm = this.context?.getSystemService(Activity.INPUT_METHOD_SERVICE) as? InputMethodManager
+        imm?.showSoftInput(this, InputMethodManager.SHOW_IMPLICIT)
+    }
+}
+
+/** Request focus before hiding keyboard - editText.requestFocus() */
+fun EditText?.hideKeyboard() {
+    if (this?.hasFocus() == true) {
+        val imm = this.context?.getSystemService(Activity.INPUT_METHOD_SERVICE) as? InputMethodManager
+        imm?.hideSoftInputFromWindow(this.windowToken, 0)
+    }
+}
+
+fun Activity.hideKeyboard() {
+    val imm = getSystemService(Activity.INPUT_METHOD_SERVICE) as InputMethodManager
+    // Find the currently focused view, so we can grab the correct window token from it.
+    var view = currentFocus
+    // If no view currently has focus, create a new one, just so we can grab a window token from it
+    if (view == null) {
+        view = View(this)
+    }
+    imm.hideSoftInputFromWindow(view.windowToken, 0)
+}
+
+// https://stackoverflow.com/questions/4745988/how-do-i-detect-if-software-keyboard-is-visible-on-android-device-or-not
+val View.isKeyboardVisible: Boolean
+    get() = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {
+        WindowInsetsCompat
+            .toWindowInsetsCompat(rootWindowInsets)
+            .isVisible(WindowInsetsCompat.Type.ime())
+    } else {
+        false
+    }
 
 enum class DateType(val value: String) {
     dd_MMM_yyyy(value = "dd MMM yyyy"),

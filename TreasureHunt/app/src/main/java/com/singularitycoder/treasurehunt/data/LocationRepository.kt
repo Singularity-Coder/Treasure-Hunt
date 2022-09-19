@@ -44,7 +44,7 @@ class LocationRepository @Inject constructor(
     fun startLocationUpdates() {
         val request = LocationRequest.create().apply {
             priority = LocationRequest.PRIORITY_HIGH_ACCURACY
-            interval = 10_000 // 10 seconds
+            interval = 1000 // 1 seconds
         }
         // Note: For this sample it's fine to use the main looper, so our callback will run on the
         // main thread. If your callback will perform any intensive operations (writing to disk,
