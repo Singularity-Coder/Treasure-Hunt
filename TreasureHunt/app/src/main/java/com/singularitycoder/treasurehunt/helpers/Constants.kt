@@ -2,6 +2,19 @@ package com.singularitycoder.treasurehunt.helpers
 
 import com.singularitycoder.treasurehunt.Treasure
 
+object IntentKey {
+    const val LOCATION_TOGGLE_STATUS = "LOCATION_TOGGLE_STATUS"
+}
+
+object DbKey {
+    const val DB_TREASURE = "db_treasure"
+    const val TABLE_TREASURE = "table_treasure"
+}
+
+object BroadcastKey {
+    const val LOCATION_TOGGLE_STATUS = "LOCATION_TOGGLE_STATUS"
+}
+
 val dummyTreasures = mutableListOf(
     Treasure(
         title = "Legendary Pokemon: HakuTakuPaku",

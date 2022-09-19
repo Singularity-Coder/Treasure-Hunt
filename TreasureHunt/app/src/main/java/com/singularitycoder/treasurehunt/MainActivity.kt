@@ -1,14 +1,21 @@
 package com.singularitycoder.treasurehunt
 
 import android.Manifest
+import android.content.BroadcastReceiver
+import android.content.Context
 import android.content.Intent
+import android.content.IntentFilter
+import android.content.pm.PackageManager
+import android.location.GnssStatus
 import android.location.Location
-import android.os.Bundle
+import android.location.LocationManager
+import android.os.*
 import android.provider.Settings
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.activity.viewModels
 import androidx.appcompat.app.AlertDialog
 import androidx.appcompat.app.AppCompatActivity
+import androidx.core.app.ActivityCompat
 import androidx.fragment.app.Fragment
 import androidx.fragment.app.FragmentManager
 import androidx.lifecycle.Lifecycle
@@ -21,6 +28,7 @@ import com.singularitycoder.treasurehunt.databinding.ActivityMainBinding
 import com.singularitycoder.treasurehunt.helpers.*
 import dagger.hilt.android.AndroidEntryPoint
 import javax.inject.Inject
+
 
 // It would be nice to bind that treasure in a physical location but that is not possible with sockets. so the lat long will be fixed but the device is moving constantly.
 // It would also be nice to do it in AR or VR. So the treasure are not just limited to audio, video, image, text but any file. We plant it in a location and find it in AR/VR. I doubt if its possible on android though
@@ -46,26 +54,75 @@ class MainActivity : AppCompatActivity() {
 
     var lastUpdatedLocation: Location? = null
 
+    private val locationToggleStatusReceiver = object : BroadcastReceiver() {
+        override fun onReceive(context: Context, intent: Intent) {
+            if (intent.action != BroadcastKey.LOCATION_TOGGLE_STATUS) return
+            val isLocationToggleOn = intent.getBooleanExtra(IntentKey.LOCATION_TOGGLE_STATUS, false)
+            if (isLocationToggleOn.not()) {
+                showLocationToggleDialog()
+            } else {
+                grantLocationPermissions()
+            }
+        }
+    }
+
+    private val permissionsResult = registerForActivityResult(ActivityResultContracts.RequestMultiplePermissions()) { permissions: Map<String, @JvmSuppressWildcards Boolean>? ->
+        permissions?.entries?.forEach { it: Map.Entry<String, @JvmSuppressWildcards Boolean> ->
+            val permission = it.key
+            val isGranted = it.value
+            when {
+                isGranted -> Unit
+                ActivityCompat.shouldShowRequestPermissionRationale(this, permission) -> {
+                    // Permission denied but not permanently, tell user why you need it. Ideally provide a button to request it again and another to dismiss
+                }
+                else -> {
+                    // permission permanently denied. Show settings dialog
+                }
+            }
+        }
+    }
+
     private val locationPermissionResult = registerForActivityResult(ActivityResultContracts.RequestPermission()) { isPermissionGranted: Boolean? ->
         isPermissionGranted ?: return@registerForActivityResult
         if (isPermissionGranted.not()) {
             val accessFineLocationNeedsRationale = shouldShowRationaleFor(Manifest.permission.ACCESS_FINE_LOCATION)
             if (accessFineLocationNeedsRationale) {
-                AlertDialog.Builder(this).apply {
-                    setTitle(R.string.permission_rationale_dialog_title)
-                    setMessage(R.string.permission_rationale_dialog_message)
-                    setPositiveButton("Ok") { dialog, which ->
-                        val intent = Intent(Settings.ACTION_LOCATION_SOURCE_SETTINGS)
-                        context.startActivity(intent)
-                    }
-                    setNegativeButton("Cancel") { dialog, which -> dialog.cancel() }
-                    show()
-                }
+                showLocationPermissionDialog()
             }
             return@registerForActivityResult
         }
         val accessFineLocationGranted = hasPermission(Manifest.permission.ACCESS_FINE_LOCATION)
-        if (accessFineLocationGranted) viewModel.toggleLocationUpdates()
+        val isLocationToggleEnabled = isLocationToggleEnabled()
+        println("isLocationToggleEnabled: $isLocationToggleEnabled")
+        if (accessFineLocationGranted && isLocationToggleEnabled) {
+            viewModel.toggleLocationUpdates()
+        } else {
+            showLocationToggleDialog()
+        }
+    }
+
+    private fun showLocationToggleDialog() {
+        AlertDialog.Builder(this@MainActivity).apply {
+            setTitle("Location toggle disabled")
+            setMessage("Turn on the location toggle to hunt treasures. Swipe down notifications drawer -> Location")
+            setPositiveButton("Ok") { dialog, which ->
+                grantLocationPermissions()
+            }
+            show()
+        }
+    }
+
+    private fun showLocationPermissionDialog() {
+        AlertDialog.Builder(this).apply {
+            setTitle(R.string.permission_rationale_dialog_title)
+            setMessage(R.string.permission_rationale_dialog_message)
+            setPositiveButton("Ok") { dialog, which ->
+                val intent = Intent(Settings.ACTION_LOCATION_SOURCE_SETTINGS)
+                context.startActivity(intent)
+            }
+            setNegativeButton("Cancel") { dialog, which -> dialog.cancel() }
+            show()
+        }
     }
 
     private val viewPager2PageChangeListener = object : ViewPager2.OnPageChangeCallback() {
@@ -91,6 +148,7 @@ class MainActivity : AppCompatActivity() {
         setContentView(binding.root)
         binding.setupUI()
         binding.setUpViewPager()
+        setLocationToggleListener()
         observeForData()
     }
 
@@ -100,14 +158,20 @@ class MainActivity : AppCompatActivity() {
         bindService(serviceIntent, viewModel, BIND_AUTO_CREATE)
     }
 
+    override fun onResume() {
+        super.onResume()
+        registerReceiver()
+        grantLocationPermissions()
+    }
+
+    override fun onPause() {
+        super.onPause()
+        unregisterReceiver()
+    }
+
     override fun onStop() {
         super.onStop()
         unbindService(viewModel)
-    }
-
-    override fun onResume() {
-        super.onResume()
-        grantLocationPermissions()
     }
 
     override fun onDestroy() {
@@ -137,6 +201,33 @@ class MainActivity : AppCompatActivity() {
         }.attach()
     }
 
+    // https://developer.android.com/reference/android/location/LocationManager#registerGnssStatusCallback(android.location.GnssStatus.Callback,%20android.os.Handler)
+    private fun setLocationToggleListener() {
+        val locationManager = getSystemService(LOCATION_SERVICE) as LocationManager
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.N) {
+            if (ActivityCompat.checkSelfPermission(this@MainActivity, Manifest.permission.ACCESS_FINE_LOCATION) != PackageManager.PERMISSION_GRANTED) {
+                return
+            }
+            locationManager.registerGnssStatusCallback(object : GnssStatus.Callback() {
+                override fun onStopped() {
+                    super.onStopped()
+                    showLocationToggleDialog()
+                    println("location toggle: stopped")
+                }
+
+                override fun onStarted() {
+                    super.onStarted()
+                    println("location toggle: started")
+                }
+
+                override fun onSatelliteStatusChanged(status: GnssStatus) {
+                    super.onSatelliteStatusChanged(status)
+                    println("location toggle: ${status.satelliteCount}")
+                }
+            }, null)
+        }
+    }
+
     private fun observeForData() {
         collectLatestLifecycleFlow(flow = viewModel.lastLocation) { lastLocation: Location? ->
             println("lastLocation: ${lastLocation?.latitude}, ${lastLocation?.longitude}")
@@ -159,6 +250,14 @@ class MainActivity : AppCompatActivity() {
 
     private fun grantLocationPermissions() {
         locationPermissionResult.launch(Manifest.permission.ACCESS_FINE_LOCATION)
+    }
+
+    private fun registerReceiver() {
+        registerReceiver(locationToggleStatusReceiver, IntentFilter(BroadcastKey.LOCATION_TOGGLE_STATUS))
+    }
+
+    private fun unregisterReceiver() {
+        unregisterReceiver(locationToggleStatusReceiver)
     }
 
     inner class HomeViewPagerAdapter(fragmentManager: FragmentManager, lifecycle: Lifecycle) : FragmentStateAdapter(fragmentManager, lifecycle) {

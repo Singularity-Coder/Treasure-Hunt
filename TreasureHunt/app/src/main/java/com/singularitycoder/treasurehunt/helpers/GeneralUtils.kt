@@ -11,6 +11,7 @@ import android.graphics.Bitmap
 import android.graphics.Canvas
 import android.graphics.Point
 import android.graphics.drawable.Drawable
+import android.location.LocationManager
 import android.media.MediaMetadataRetriever
 import android.net.Uri
 import android.os.Build
@@ -56,11 +57,6 @@ import java.io.FileOutputStream
 import java.text.SimpleDateFormat
 import java.util.*
 import java.util.concurrent.TimeUnit
-
-const val DB_CONTACT = "db_contact"
-const val TABLE_CONTACT = "table_contact"
-
-const val TAG_PERSON_DETAIL_MODAL_BOTTOM_SHEET = "TAG_PERSON_DETAIL_MODAL_BOTTOM_SHEET"
 
 fun View.showSnackBar(
     message: String,
@@ -472,6 +468,21 @@ val View.isKeyboardVisible: Boolean
     } else {
         false
     }
+
+// https://stackoverflow.com/questions/10311834/how-to-check-if-location-services-are-enabled#:~:text=%40lenik%2C%20some%20devices%20provide%20a,if%20specific%20providers%20are%20enabled.
+// https://developer.android.com/reference/android/provider/Settings.Secure#LOCATION_PROVIDERS_ALLOWED
+fun Context.isLocationToggleEnabled(): Boolean {
+    return if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.P) {
+        val locationManager = getSystemService(Context.LOCATION_SERVICE) as LocationManager
+        val isGpsEnabled = locationManager.isProviderEnabled(LocationManager.GPS_PROVIDER)
+        val isNetworkEnabled = locationManager.isProviderEnabled(LocationManager.NETWORK_PROVIDER)
+        val isProvidersListEmpty = locationManager.getProviders(true).isEmpty()
+        locationManager.isLocationEnabled
+    } else {
+        val locationProviders: String = Settings.Secure.getString(contentResolver, Settings.Secure.LOCATION_PROVIDERS_ALLOWED)
+        locationProviders.isNotBlank()
+    }
+}
 
 enum class DateType(val value: String) {
     dd_MMM_yyyy(value = "dd MMM yyyy"),
