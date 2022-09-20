@@ -14,14 +14,15 @@ import android.os.Bundle
 import android.provider.Settings
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.activity.viewModels
-import androidx.appcompat.app.AlertDialog
 import androidx.appcompat.app.AppCompatActivity
 import androidx.core.app.ActivityCompat
+import androidx.core.content.ContextCompat
 import androidx.fragment.app.Fragment
 import androidx.fragment.app.FragmentManager
 import androidx.lifecycle.Lifecycle
 import androidx.viewpager2.adapter.FragmentStateAdapter
 import androidx.viewpager2.widget.ViewPager2
+import com.google.android.material.dialog.MaterialAlertDialogBuilder
 import com.google.android.material.tabs.TabLayout
 import com.google.android.material.tabs.TabLayoutMediator
 import com.singularitycoder.treasurehunt.data.PlayServicesAvailabilityChecker
@@ -237,25 +238,38 @@ class MainActivity : AppCompatActivity() {
     }
 
     private fun showLocationToggleDialog() {
-        AlertDialog.Builder(this@MainActivity).apply {
+        MaterialAlertDialogBuilder(
+            this@MainActivity,
+            com.google.android.material.R.style.ThemeOverlay_MaterialComponents_Dialog
+        ).apply {
+            setCancelable(false)
             setTitle("Location toggle disabled")
             setMessage("Turn on the location toggle to hunt treasures. Swipe down notifications drawer -> Location")
-            setPositiveButton("Ok") { dialog, which ->
+            background = ContextCompat.getDrawable(this@MainActivity, R.drawable.alert_dialog_bg)
+            setPositiveButton("Ok") { dialog, int ->
                 grantLocationPermissions()
             }
+            create()
             show()
         }
     }
 
     private fun showLocationPermissionDialog() {
-        AlertDialog.Builder(this).apply {
+        MaterialAlertDialogBuilder(
+            this@MainActivity,
+            com.google.android.material.R.style.ThemeOverlay_MaterialComponents_Dialog
+        ).apply {
+            setCancelable(false)
             setTitle(R.string.permission_rationale_dialog_title)
             setMessage(R.string.permission_rationale_dialog_message)
-            setPositiveButton("Ok") { dialog, which ->
+            background = ContextCompat.getDrawable(this@MainActivity, R.drawable.alert_dialog_bg)
+            setPositiveButton("Ok") { dialog, int ->
                 val intent = Intent(Settings.ACTION_LOCATION_SOURCE_SETTINGS)
                 context.startActivity(intent)
             }
-            setNegativeButton("Cancel") { dialog, which -> dialog.cancel() }
+            setNegativeButton("Cancel") { dialog, int ->
+            }
+            create()
             show()
         }
     }
